@@ -2,11 +2,14 @@ require 'rails_helper'
 
 RSpec.describe 'Pets API', type: :request do
     #Initialize test data
-    let!(:pets) { create_list(:pet, 10)}
+    let(:user) { create(:user) }
+    let!(:pets) { create_list(:pet, 10, created_by: user.id)}
     let(:pet_id) { pets.first.id }
+    # authorize request
+    let(:headers) { valid_headers }
     
     describe 'GET /pets' do
-        before { get '/pets' }
+        before { get '/pets', params: {}, headers: headers }
         it 'return pets' do
             expect(json).not_to be_empty
             expect(json.size).to eq(10)
@@ -18,7 +21,7 @@ RSpec.describe 'Pets API', type: :request do
     end
     
     describe 'GET /pets/:id' do
-        before { get "/pets/#{pet_id}" }
+        before { get "/pets/#{pet_id}", params: {}, headers: headers }
         
         context 'when the record exists' do
             it 'returns the pet' do
@@ -44,10 +47,11 @@ RSpec.describe 'Pets API', type: :request do
     
     describe 'POST /pets' do
         # valid payload
-        let(:valid_attributes) { { name: 'Learn Elm', animal: 'perro', breed: 'doberman', created_by: '1' } }
-    
+        let(:valid_attributes) do
+          { name: 'Learn Elm', animal: 'perro', breed: 'doberman', created_by: user.id.to_s }.to_json
+        end
         context 'when the request is valid' do
-          before { post '/pets', params: valid_attributes }
+          before { post '/pets', params: valid_attributes, headers: headers }
     
           it 'creates a pet' do
             expect(json['name']).to eq('Learn Elm')
@@ -59,7 +63,8 @@ RSpec.describe 'Pets API', type: :request do
         end
     
         context 'when the request is invalid' do
-          before { post '/pets', params: { name: 'Foobar', animal: 'perro', breed: 'pastor aleman' } }
+          let(:valid_attributes) { { name: nil  }.to_json }
+          before { post '/pets', params: valid_attributes, headers: headers }
     
           it 'returns status code 422' do
             expect(response).to have_http_status(422)
@@ -67,17 +72,17 @@ RSpec.describe 'Pets API', type: :request do
     
           it 'returns a validation failure message' do
             expect(response.body)
-              .to match(/Validation failed: Created by can't be blank/)
+              .to match(/Validation failed: Name can't be blank/)
           end
         end
       end
     
       # Test suite for PUT /pets/:id
       describe 'PUT /pets/:id' do
-        let(:valid_attributes) { { name: 'Shopping' } }
+        let(:valid_attributes) { { name: 'Shopping' }.to_json }
     
         context 'when the record exists' do
-          before { put "/pets/#{pet_id}", params: valid_attributes }
+          before { put "/pets/#{pet_id}", params: valid_attributes, headers: headers }
     
           it 'updates the record' do
             expect(response.body).to be_empty
@@ -91,7 +96,7 @@ RSpec.describe 'Pets API', type: :request do
     
       # Test suite for DELETE /todos/:id
       describe 'DELETE /pets/:id' do
-        before { delete "/pets/#{pet_id}" }
+        before { delete "/pets/#{pet_id}", params: {}, headers: headers }
     
         it 'returns status code 204' do
           expect(response).to have_http_status(204)

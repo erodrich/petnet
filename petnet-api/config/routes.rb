@@ -3,4 +3,7 @@ Rails.application.routes.draw do
     resources :pets do
         resources :posts
     end
+    get  'search', to: 'posts#search'
+    post 'auth/login', to: 'authentication#authenticate'
+    post 'signup', to: 'users#create'
 end
